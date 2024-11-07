@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Step 1: Download the script to /tmp directory
-SCRIPT_URL="https://raw.githubusercontent.com/Waer1/waer/refs/heads/master/run.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/Dafa-Co/custody-self-manager-scripts/refs/heads/main/run.sh"
 SCRIPT_NAME="run.sh"
 DOWNLOAD_PATH="/tmp/qqqq"
 SCRIPT_FILE="$DOWNLOAD_PATH/$SCRIPT_NAME"
