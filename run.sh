@@ -100,22 +100,35 @@ configure_dropbox() {
 }
 
 # Function to display storage options and get user choice
+
 display_options() {
-    echo "Please choose a storage option:"
-    echo "1) AWS S3"
-    echo "2) One Drive"
-    echo "3) Google Drive"
-    echo "4) Dropbox"
-    read -p "Enter your choice (1-4): " choice
+
+    local choice=$1 # Use the first argument as the choice
+
+    if [ -z "$choice" ]; then
+        # If no argument is passed, prompt the user
+        echo "Please choose an option:"
+        echo "1) AWS S3"       # .env
+        echo "2) One Drive"    # credentials.json
+        echo "3) Google Drive" # credentials.json
+        echo "4) Dropbox"      # .env
+        read -p "Enter your choice (1-4): " choice
+    fi
 
     case $choice in
-        1) configure_aws_s3 ;;
-        2) configure_drive "OneDrive" "oneDrive" ;;
-        3) configure_drive "Google Drive" "googleDrive" ;;
-        4) configure_dropbox ;;
-        *) echo "Invalid choice. Please select between 1 and 4."; exit 1 ;;
+    1) configure_aws_s3 ;;
+    2) configure_drive "OneDrive" "oneDrive" ;;
+    3) configure_drive "Google Drive" "googleDrive" ;;
+    4) configure_dropbox ;;
+    *)
+        echo "Invalid choice. Please select between 1 and 4."
+        exit 1
+        ;;
     esac
 }
+
+display_options "$1"
+
 
 # Function to find an available port
 find_available_port() {
@@ -161,8 +174,10 @@ write_to_env_file "URL" "http://$user_domain:$user_port"
 write_to_env_file "CUSTODY_URL" "https://${corporate_subdomain}.api-custody.roxcustody.io/api"
 
 # Generate custom Docker image and container names
-image_name="${user_domain//./_}_${api_key}_image"  # Replace dots in domain with underscores
-container_name="${user_domain//./_}_${api_key}_container"
+image_name="${corporate_subdomain//./_}_image" # Replace dots in domain with underscores
+sanitized_docker_image="${docker_image//\//_}"  # Replace / with _
+container_name="${corporate_subdomain//./_}_${sanitized_docker_image}"
+
 
 # Build the Docker container with the necessary files copied in
 prepare_docker_image() {
