@@ -225,7 +225,7 @@ echo "Container is running on port $user_port with the necessary files copied in
 
 # Print instructions to manage the container
 echo -e "\n--- Docker Container Management Instructions ---"
-echo "To view the container logs: docker logs $container_name"
+echo "To view the container logs: docker logs $container_name -f"
 echo "To stop the container: docker stop $container_name"
 echo "To start the container again: docker start $container_name"
 echo "To remove the container: docker rm $container_name"
