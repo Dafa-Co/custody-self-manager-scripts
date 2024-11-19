@@ -173,9 +173,13 @@ write_to_env_file "PORT" "3000"
 write_to_env_file "URL" "http://$user_domain:$user_port"
 write_to_env_file "CUSTODY_URL" "https://${corporate_subdomain}.api-custody.roxcustody.io/api"
 
+
+# Add randomization using a random string or timestamp
+random_suffix=$(date +%s | sha256sum | base64 | head -c 8) # Generate an 8-character random string
+
 # Generate custom Docker image and container names
 image_name="${corporate_subdomain//./_}_image" # Replace dots in domain with underscores
-sanitized_docker_image="${docker_image//\//_}"  # Replace / with _
+sanitized_docker_image="${docker_image//\//_}_${random_suffix}"
 container_name="${corporate_subdomain//./_}_${sanitized_docker_image}"
 
 
@@ -202,6 +206,9 @@ prepare_docker_image() {
     docker rm "$temp_container_id"
     rm "$env_file"
 }
+
+# pull the latest version of the base image
+docker pull "$docker_image"
 
 # Prepare the Docker image with the necessary environment variables
 prepare_docker_image "$docker_image" "$file_to_mount"
