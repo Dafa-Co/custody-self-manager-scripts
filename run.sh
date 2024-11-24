@@ -52,19 +52,31 @@ get_bucket_name_and_region_from_url() {
     local aws_url=$1
     local bucket_name bucket_region
 
-    bucket_name=$(echo "$aws_url" | grep -oP 'https://\K[^.]+(?:\.[^.]+)*(?=\.s3\.)')
-    bucket_region=$(echo "$aws_url" | grep -oP '\.s3\.([a-z0-9-]+)\.amazonaws\.com' | grep -oP '[a-z0-9-]+(?=\.amazonaws\.com)')
-    aws_endpoint="https://s3.$bucket_region.amazonaws.com"
+    aws_vs_do=$(echo "$aws_url" | grep -oP '(digitaloceanspaces|amazonaws)(?=\.com)')
+
+    if [ "$aws_vs_do" == "amazonaws" ]; then
+        bucket_region=$(echo "$aws_url" | grep -oP '\.([a-z0-9-]+)\.amazonaws\.com' | grep -oP '[a-z0-9-]+(?=\.amazonaws\.com)')
+        bucket_name=$(echo "$aws_url" | grep -oP "https://\K(.*?)(?=\.s3\.$bucket_region\.amazonaws\.com)")
+        aws_endpoint="https://s3.$bucket_region.amazonaws.com"
+    elif [ "$aws_vs_do" == "digitaloceanspaces" ]; then
+        bucket_region=$(echo "$aws_url" | grep -oP '\.([a-z0-9-]+)\.digitaloceanspaces\.com' | grep -oP '[a-z0-9-]+(?=\.digitaloceanspaces\.com)')
+        bucket_name=$(echo "$aws_url" | grep -oP "https://\K(.*?)(?=\.$bucket_region\.digitaloceanspaces\.com)")
+        aws_endpoint="https://$bucket_region.digitaloceanspaces.com"
+    else
+        echo "Invalid url." >&2
+        echo "-1"
+        exit 1
+    fi
 
     # Validate bucket name (length > 2, no spaces)
     if [[ ${#bucket_name} -le 2 || "$bucket_name" =~ [[:space:]] ]]; then
-        echo "Invalid bucket name." >&2
+        echo "Invalid url." >&2
         echo "-1"
         exit 1
     fi
     # Validate region (length > 0, contains only valid characters)
     if [[ -z "$bucket_region" || ! "$bucket_region" =~ ^[a-z0-9-]+$ ]]; then
-        echo "Invalid bucket region." >&2
+        echo "Invalid url." >&2
         echo "-1"
         exit 1
     fi
@@ -76,9 +88,10 @@ get_bucket_name_and_region_from_url() {
 configure_aws_s3() {
     echo "Configuring AWS S3..."
     while true; do
-        read -p "Enter AWS URL (e.g. https://bucket-name.s3.us-west-1.amazonaws.com/photos/image.jpg): " aws_url
+        read -p "Enter AWS URL (e.g. https://bucket-name.s3.us-west-1.amazonaws.com/photos/image.jpg or https://my-space.nyc3.digitaloceanspaces.com/photos/image.jpg): " aws_url
 
         result=$(get_bucket_name_and_region_from_url "$aws_url")
+
         if [ "$result" != "-1" ]; then
             read -p "Enter Access Key Id: " bucket_key
             read -p "Enter Access Key Secret: " bucket_secret
