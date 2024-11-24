@@ -44,7 +44,6 @@ write_to_env_file() {
 
 clear_env_file() {
     if [ -f .env ]; then
-        echo "Clearing existing .env file..."
         > .env
     fi
 }
