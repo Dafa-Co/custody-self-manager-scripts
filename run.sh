@@ -42,14 +42,35 @@ write_to_env_file() {
     echo "$1=$2" >>.env
 }
 
+clear_env_file() {
+    if [ -f .env ]; then
+        echo "Clearing existing .env file..."
+        > .env
+    fi
+}
+
 # Function to collect and write AWS credentials
 configure_aws_s3() {
     echo "Configuring AWS S3..."
-    read -p "Enter AWS Endpoint: " aws_endpoint
-    read -p "Enter Bucket Key: " bucket_key
-    read -p "Enter Bucket Secret: " bucket_secret
-    read -p "Enter Bucket Region: " bucket_region
-    read -p "Enter Bucket Name: " bucket_name
+
+    read -p "Enter AWS URL (e.g. https://bucket-name.s3.us-west-1.amazonaws.com/photos/image.jpg): " aws_url
+    read -p "Enter Access Key Id: " bucket_key
+    read -p "Enter Access Key Secret: " bucket_secret
+
+    bucket_name=$(echo "$aws_url" | grep -oP 'https://\K[^.]+(?:\.[^.]+)*(?=\.s3\.)')
+    bucket_region=$(echo "$aws_url" | grep -oP '\.s3\.([a-z0-9-]+)\.amazonaws\.com' | grep -oP '[a-z0-9-]+(?=\.amazonaws\.com)')
+    aws_endpoint="https://s3.$bucket_region.amazonaws.com"
+
+    # Validate bucket name (length > 2, no spaces)
+    if [[ ${#bucket_name} -le 2 || "$bucket_name" =~ [[:space:]] ]]; then
+        echo "Invalid bucket name." >&2
+        exit 1
+    fi
+    # Validate region (length > 0, contains only valid characters)
+    if [[ -z "$bucket_region" || ! "$bucket_region" =~ ^[a-z0-9-]+$ ]]; then
+        echo "Invalid bucket region." >&2
+        exit 1
+    fi
 
     write_to_env_file "AWS_ENDPOINT" "$aws_endpoint"
     write_to_env_file "BUCKETKEY" "$bucket_key"
@@ -127,6 +148,7 @@ display_options() {
     esac
 }
 
+clear_env_file
 display_options "$1"
 
 
