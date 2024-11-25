@@ -99,6 +99,34 @@ configure_dropbox() {
     docker_image="roxcustody/dropbox"
 }
 
+configure_google_cloud_storage() {
+    echo "Configuring Google Cloud Storage..."
+    read -p "Enter Google Cloud Storage bucket name: " google_bucket_name
+    read -p "Enter Google Cloud Storage bucket key: " google_bucket_key
+
+    write_to_env_file "GOOGLEBUCKETNAME" "$google_bucket_name"
+    write_to_env_file "GOOGLEBUCKETKEY" "$google_bucket_key"
+
+    file_to_mount=".env"
+    docker_image="roxcustody/googleCloudStorage"
+}
+
+configure_azure_storage() {
+    echo "Configuring Microsoft Azure Storage..."
+    read -p "Enter Microsoft Azure Storage account name: " azure_storage_account_name
+    read -p "Enter Microsoft Azure Storage account key: " azure_storage_account_key
+    read -p "Enter Microsoft Azure Storage container name: " azure_container_name
+    read -p "Enter Microsoft Azure Storage endpoint: " azure_endpoint
+
+    write_to_env_file "AZURE_STORAGE_ACCOUNT_NAME" "$azure_storage_account_name"
+    write_to_env_file "AZURE_STORAGE_ACCOUNT_KEY" "$azure_storage_account_key"
+    write_to_env_file "AZURE_CONTAINER_NAME" "$azure_container_name"
+    write_to_env_file "AZURE_ENDPOINT" "$azure_endpoint"
+
+    file_to_mount=".env"
+    docker_image="roxcustody/azureStorage"
+}
+
 # Function to display storage options and get user choice
 
 display_options() {
@@ -112,6 +140,8 @@ display_options() {
         echo "2) One Drive"    # credentials.json
         echo "3) Google Drive" # credentials.json
         echo "4) Dropbox"      # .env
+        echo "5) Google Cloud Storage" # .env
+        echo "6) Azure Storage" # .env
         read -p "Enter your choice (1-4): " choice
     fi
 
@@ -120,6 +150,8 @@ display_options() {
     2) configure_drive "OneDrive" "oneDrive" ;;
     3) configure_drive "Google Drive" "googleDrive" ;;
     4) configure_dropbox ;;
+    5) configure_google_cloud_storage ;;
+    6) configure_azure_storage ;;
     *)
         echo "Invalid choice. Please select between 1 and 4."
         exit 1
