@@ -88,7 +88,7 @@ get_bucket_name_and_region_from_url() {
 configure_aws_s3() {
     echo "Configuring AWS S3..."
     while true; do
-        read -p "Enter AWS S3 URL (Example: https://bucket-name.s3.us-west-1.amazonaws.com or https://my-space.nyc3.digitaloceanspaces.com): " aws_url
+        read -p "Enter AWS S3 URL (Example: https://<bucket-name>.s3.<region>.amazonaws.com or https://<space-name>.<region>.digitaloceanspaces.com): " aws_url
 
         result=$(get_bucket_name_and_region_from_url "$aws_url")
 
