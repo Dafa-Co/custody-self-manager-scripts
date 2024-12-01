@@ -42,23 +42,75 @@ write_to_env_file() {
     echo "$1=$2" >>.env
 }
 
+clear_env_file() {
+    if [ -f .env ]; then
+        > .env
+    fi
+}
+
+get_bucket_name_and_region_from_url() {
+    local aws_url=$1
+    local bucket_name bucket_region
+
+    aws_vs_do=$(echo "$aws_url" | grep -oP '(digitaloceanspaces|amazonaws)(?=\.com)')
+
+    if [ "$aws_vs_do" == "amazonaws" ]; then
+        bucket_region=$(echo "$aws_url" | grep -oP '\.([a-z0-9-]+)\.amazonaws\.com' | grep -oP '[a-z0-9-]+(?=\.amazonaws\.com)')
+        bucket_name=$(echo "$aws_url" | grep -oP "https://\K(.*?)(?=\.s3\.$bucket_region\.amazonaws\.com)")
+        aws_endpoint="https://s3.$bucket_region.amazonaws.com"
+    elif [ "$aws_vs_do" == "digitaloceanspaces" ]; then
+        bucket_region=$(echo "$aws_url" | grep -oP '\.([a-z0-9-]+)\.digitaloceanspaces\.com' | grep -oP '[a-z0-9-]+(?=\.digitaloceanspaces\.com)')
+        bucket_name=$(echo "$aws_url" | grep -oP "https://\K(.*?)(?=\.$bucket_region\.digitaloceanspaces\.com)")
+        aws_endpoint="https://$bucket_region.digitaloceanspaces.com"
+    else
+        echo "Invalid url." >&2
+        echo "-1"
+        exit 1
+    fi
+
+    # Validate bucket name (length > 2, no spaces)
+    if [[ ${#bucket_name} -le 2 || "$bucket_name" =~ [[:space:]] ]]; then
+        echo "Invalid url." >&2
+        echo "-1"
+        exit 1
+    fi
+    # Validate region (length > 0, contains only valid characters)
+    if [[ -z "$bucket_region" || ! "$bucket_region" =~ ^[a-z0-9-]+$ ]]; then
+        echo "Invalid url." >&2
+        echo "-1"
+        exit 1
+    fi
+
+    echo "$bucket_name $bucket_region $aws_endpoint"
+}
+
 # Function to collect and write AWS credentials
 configure_aws_s3() {
     echo "Configuring AWS S3..."
-    read -p "Enter AWS Endpoint: " aws_endpoint
-    read -p "Enter Bucket Key: " bucket_key
-    read -p "Enter Bucket Secret: " bucket_secret
-    read -p "Enter Bucket Region: " bucket_region
-    read -p "Enter Bucket Name: " bucket_name
+    while true; do
+        read -p "Enter AWS URL (e.g. https://bucket-name.s3.us-west-1.amazonaws.com/photos/image.jpg or https://my-space.nyc3.digitaloceanspaces.com/photos/image.jpg): " aws_url
 
-    write_to_env_file "AWS_ENDPOINT" "$aws_endpoint"
-    write_to_env_file "BUCKETKEY" "$bucket_key"
-    write_to_env_file "BUCKETSECRET" "$bucket_secret"
-    write_to_env_file "BUCKETREGION" "$bucket_region"
-    write_to_env_file "BUCKETNAME" "$bucket_name"
-    write_to_env_file "HANDLER" "amazonS3"
+        result=$(get_bucket_name_and_region_from_url "$aws_url")
 
-    docker_image="roxcustody/amazons3"
+        if [ "$result" != "-1" ]; then
+            read -p "Enter Access Key Id: " bucket_key
+            read -p "Enter Access Key Secret: " bucket_secret
+
+            bucket_name=$(echo "$result" | awk '{print $1}')
+            bucket_region=$(echo "$result" | awk '{print $2}')
+            aws_endpoint=$(echo "$result" | awk '{print $3}')
+
+            write_to_env_file "AWS_ENDPOINT" "$aws_endpoint"
+            write_to_env_file "BUCKETKEY" "$bucket_key"
+            write_to_env_file "BUCKETSECRET" "$bucket_secret"
+            write_to_env_file "BUCKETREGION" "$bucket_region"
+            write_to_env_file "BUCKETNAME" "$bucket_name"
+            write_to_env_file "HANDLER" "amazonS3"
+
+            docker_image="roxcustody/amazons3"
+            break
+        fi
+    done
 }
 
 # Function to configure OneDrive or Google Drive with credentials file
@@ -127,6 +179,7 @@ display_options() {
     esac
 }
 
+clear_env_file
 display_options "$1"
 
 
