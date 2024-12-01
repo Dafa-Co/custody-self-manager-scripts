@@ -108,7 +108,7 @@ configure_google_cloud_storage() {
     write_to_env_file "GOOGLEBUCKETKEY" "$google_bucket_key"
 
     file_to_mount=".env"
-    docker_image="roxcustody/googleCloudStorage"
+    docker_image="roxcustody/google_cloud_storage"
 }
 
 configure_azure_storage() {
@@ -124,7 +124,7 @@ configure_azure_storage() {
     write_to_env_file "AZURE_ENDPOINT" "$azure_endpoint"
 
     file_to_mount=".env"
-    docker_image="roxcustody/azureStorage"
+    docker_image="roxcustody/azure_storage"
 }
 
 # Function to display storage options and get user choice
