@@ -305,7 +305,7 @@ fi
 
 # Run the Docker container from the newly created image with the custom name
 echo "Running the application on $user_domain:$user_port with container name: $container_name..."
-docker run -d -p $user_port:3000 --name "$container_name" "$image_name"
+docker run -d -p $user_port:3000 --name "$container_name" --restart always "$image_name"
 echo "Container is running on port $user_port with the necessary files copied inside."
 
 # Print instructions to manage the container
