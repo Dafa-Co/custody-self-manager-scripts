@@ -161,7 +161,7 @@ configure_google_cloud_storage() {
     write_to_env_file "HANDLER" "googleCloudStorage"
 
     file_to_mount=".env"
-    docker_image="roxcustody/google_cloud_storage"
+    docker_image="roxcustody/google-cloud-storage"
 }
 
 configure_azure_storage() {
