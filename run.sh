@@ -158,6 +158,7 @@ configure_google_cloud_storage() {
 
     write_to_env_file "GOOGLEBUCKETNAME" "$google_bucket_name"
     write_to_env_file "GOOGLEBUCKETKEY" "$google_bucket_key"
+    write_to_env_file "HANDLER" "googleCloudStorage"
 
     file_to_mount=".env"
     docker_image="roxcustody/google_cloud_storage"
@@ -174,6 +175,7 @@ configure_azure_storage() {
     write_to_env_file "AZURE_STORAGE_ACCOUNT_KEY" "$azure_storage_account_key"
     write_to_env_file "AZURE_CONTAINER_NAME" "$azure_container_name"
     write_to_env_file "AZURE_ENDPOINT" "$azure_endpoint"
+    write_to_env_file "HANDLER" "microsoftAzure"
 
     file_to_mount=".env"
     docker_image="roxcustody/azure_storage"
