@@ -117,16 +117,17 @@ configure_aws_s3() {
 configure_drive() {
     local service_name=$1
     local handler_value=$2
+    local file_name=$3
     echo "Configuring $service_name..."
 
     while true; do
-        read -p "Enter the full path to your $service_name credentials.json: " drive_path
+        read -p "Enter the full path to your $service_name $file_name: " drive_path
         drive_path="${drive_path/#\~/$HOME}" # Expand ~ to home directory
         if [[ -f "$drive_path" ]]; then
-            cp "$drive_path" "$(dirname "$0")/credentials.json"
+            cp "$drive_path" "$(dirname "$0")/$file_name"
             echo "Credentials copied to script's directory."
             write_to_env_file "HANDLER" "$handler_value"
-            file_to_mount="credentials.json"
+            file_to_mount="$file_name"
             docker_image="roxcustody/${handler_value}"
             break
         else
@@ -152,6 +153,8 @@ configure_dropbox() {
 }
 
 configure_google_cloud_storage() {
+    configure_drive "google cloud storage" "googleCloudStorage" "google-cloud-storage.json";
+
     echo "Configuring Google Cloud Storage..."
     read -p "Enter Google Cloud Storage bucket name: " google_bucket_name
     read -p "Enter Google Cloud Storage bucket key: " google_bucket_key
@@ -201,10 +204,10 @@ display_options() {
 
     case $choice in
     1) configure_aws_s3 ;;
-    2) configure_drive "OneDrive" "oneDrive" ;;
-    3) configure_drive "Google Drive" "googleDrive" ;;
+    2) configure_drive "OneDrive" "oneDrive" "credentials.json";;
+    3) configure_drive "Google Drive" "googleDrive" "credentials.json";;
     4) configure_dropbox ;;
-    5) configure_google_cloud_storage ;;
+    5) configure_google_cloud_storage;;
     6) configure_azure_storage ;;
     *)
         echo "Invalid choice. Please select between 1 and 4."
@@ -301,9 +304,7 @@ docker pull "$docker_image"
 prepare_docker_image "$docker_image" "$file_to_mount"
 
 # Remove credentials.json if it was copied to the script's directory
-if [ "$file_to_mount" == "credentials.json" ]; then
-    rm "$(dirname "$0")/credentials.json"
-fi
+rm "$(dirname "$0")/$file_to_mount"
 
 # Run the Docker container from the newly created image with the custom name
 echo "Running the application on $user_domain:$user_port with container name: $container_name..."
