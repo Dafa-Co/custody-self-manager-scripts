@@ -125,6 +125,10 @@ configure_file() {
         drive_path="${drive_path/#\~/$HOME}" # Expand ~ to home directory
         if [[ -f "$drive_path" ]]; then
 
+
+            # make the file empty
+            >"credentials.json"
+
             # read the file and write it to the credentials file
             while IFS= read -r line; do
                 echo "$line" >>"credentials.json"
