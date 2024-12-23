@@ -114,7 +114,7 @@ configure_aws_s3() {
 }
 
 # Function to configure OneDrive or Google Drive with credentials file
-configure_drive() {
+configure_file() {
     local service_name=$1
     local handler_value=$2
     local file_name=$3
@@ -124,11 +124,9 @@ configure_drive() {
         read -p "Enter the full path to your $service_name $file_name: " drive_path
         drive_path="${drive_path/#\~/$HOME}" # Expand ~ to home directory
         if [[ -f "$drive_path" ]]; then
-            cp "$drive_path" "$(dirname "$0")/$file_name"
+            cp "$drive_path" "$(dirname "$0")/credentials.json"
             echo "Credentials copied to script's directory."
-            write_to_env_file "HANDLER" "$handler_value"
-            file_to_mount="$file_name"
-            docker_image="roxcustody/${handler_value}"
+            file_to_mount="credentials.json"
             break
         else
             echo "File not found. Please enter a valid path."
@@ -148,13 +146,10 @@ configure_dropbox() {
     write_to_env_file "DROPBOX_CLIENT_SECRET" "$dropbox_client_secret"
     write_to_env_file "HANDLER" "dropbox"
 
-    file_to_mount=".env"
     docker_image="roxcustody/dropbox"
 }
 
 configure_google_cloud_storage() {
-    configure_drive "google cloud storage" "googleCloudStorage" "google-cloud-storage.json";
-
     echo "Configuring Google Cloud Storage..."
     read -p "Enter Google Cloud Storage bucket name: " google_bucket_name
     read -p "Enter Google Cloud Storage bucket key: " google_bucket_key
@@ -163,8 +158,9 @@ configure_google_cloud_storage() {
     write_to_env_file "GOOGLEBUCKETKEY" "$google_bucket_key"
     write_to_env_file "HANDLER" "googleCloudStorage"
 
-    file_to_mount=".env"
-    docker_image="roxcustody/google-cloud-storage"
+    configure_file "google cloud storage" "google-cloud-storage" "google-cloud-storage.json";
+    write_to_env_file "HANDLER" "googleCloudStorage"
+    docker_image="roxcustody/google_cloud_storage"
 }
 
 configure_azure_storage() {
@@ -180,8 +176,22 @@ configure_azure_storage() {
     write_to_env_file "AZURE_ENDPOINT" "$azure_endpoint"
     write_to_env_file "HANDLER" "microsoftAzure"
 
-    file_to_mount=".env"
     docker_image="roxcustody/azure_storage"
+}
+
+
+
+configure_one_drive() {
+    configure_file "OneDrive" "oneDrive" "credentials.json"
+    write_to_env_file "HANDLER" "googleCloudStorage"
+    docker_image="roxcustody/oneDrive"
+}
+
+
+configure_google_drive() {
+    configure_file "Google Drive" "googleDrive" "credentials.json"
+    write_to_env_file "HANDLER" "googleDrive"
+    docker_image="roxcustody/google_drive"
 }
 
 # Function to display storage options and get user choice
@@ -199,18 +209,18 @@ display_options() {
         echo "4) Dropbox"      # .env
         echo "5) Google Cloud Storage" # .env
         echo "6) Azure Storage" # .env
-        read -p "Enter your choice (1-4): " choice
+        read -p "Enter your choice (1-6): " choice
     fi
 
     case $choice in
     1) configure_aws_s3 ;;
-    2) configure_drive "OneDrive" "oneDrive" "credentials.json";;
-    3) configure_drive "Google Drive" "googleDrive" "credentials.json";;
+    2) configure_one_drive;;
+    3) configure_google_drive;;
     4) configure_dropbox ;;
     5) configure_google_cloud_storage;;
     6) configure_azure_storage ;;
     *)
-        echo "Invalid choice. Please select between 1 and 4."
+        echo "Invalid choice. Please select between 1 and 6."
         exit 1
         ;;
     esac
