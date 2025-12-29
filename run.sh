@@ -14,9 +14,17 @@ check_docker_installed() {
 # Function to install Docker
 install_docker() {
     echo "Starting Docker installation..."
-    curl -o install-docker.sh https://releases.rancher.com/install-docker/24.0.sh
-    sh install-docker.sh
-    rm install-docker.sh
+
+    if command -v docker &>/dev/null; then
+        echo "Docker already installed."
+        return 0
+    fi
+
+    curl -fsSL https://get.docker.com | sh
+
+    systemctl enable docker
+    systemctl start docker
+
     if command -v docker &>/dev/null; then
         echo "Docker installation completed successfully."
     else
@@ -24,6 +32,7 @@ install_docker() {
         exit 1
     fi
 }
+
 
 # Check if Docker is installed, prompt for installation if not
 check_docker_installed || {
