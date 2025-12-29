@@ -143,7 +143,7 @@ write_s3_info_to_env_file() {
     write_to_env_file "BUCKETSECRET" "$bucket_secret"
     write_to_env_file "BUCKETREGION" "$bucket_region"
     write_to_env_file "BUCKETNAME" "$bucket_name"
-    write_to_env_file "HANDLER" "amazonS3"
+    write_to_env_file "HANDLER" "amazon_s3"
 }
 
 
@@ -165,7 +165,7 @@ configure_aws_s3() {
 
             write_s3_info_to_env_file "$aws_endpoint" "$bucket_key" "$bucket_secret" "$bucket_region" "$bucket_name"
 
-            docker_image="roxcustody/amazons3"
+            docker_image="roxcustody/amazon_s3_mpc"
             break
         fi
     done
@@ -188,7 +188,7 @@ configure_hetzner_object_storage() {
 
             write_s3_info_to_env_file "$hetzner_endpoint" "$bucket_key" "$bucket_secret" "$bucket_region" "$bucket_name"
 
-            docker_image="roxcustody/amazons3"
+            docker_image="roxcustody/amazon_s3_mpc"
             break
         fi
     done
@@ -210,7 +210,7 @@ configure_digital_ocean_spaces() {
 
             write_s3_info_to_env_file "$do_endpoint" "$bucket_key" "$bucket_secret" "$bucket_region" "$bucket_name"
 
-            docker_image="roxcustody/amazons3"
+            docker_image="roxcustody/amazon_s3_mpc"
             break
         fi
     done
@@ -257,7 +257,7 @@ configure_dropbox() {
     write_to_env_file "DROPBOX_CLIENT_SECRET" "$dropbox_client_secret"
     write_to_env_file "HANDLER" "dropbox"
 
-    docker_image="roxcustody/dropbox"
+    docker_image="roxcustody/dropbox_mpc"
 }
 
 configure_google_cloud_storage() {
@@ -271,7 +271,7 @@ configure_google_cloud_storage() {
 
     configure_file "google cloud storage" "google-cloud-storage" "google-cloud-storage.json";
     write_to_env_file "HANDLER" "googleCloudStorage"
-    docker_image="roxcustody/google_cloud_storage"
+    docker_image="roxcustody/google_cloud_storage_mpc"
 }
 
 configure_azure_storage() {
@@ -287,7 +287,7 @@ configure_azure_storage() {
     write_to_env_file "AZURE_ENDPOINT" "$azure_endpoint"
     write_to_env_file "HANDLER" "microsoftAzure"
 
-    docker_image="roxcustody/azure_storage"
+    docker_image="roxcustody/azure_storage_mpc"
 }
 
 
@@ -295,14 +295,14 @@ configure_azure_storage() {
 configure_one_drive() {
     configure_file "OneDrive" "oneDrive" "credentials.json"
     write_to_env_file "HANDLER" "googleCloudStorage"
-    docker_image="roxcustody/oneDrive"
+    docker_image="roxcustody/oneDrive_mpc"
 }
 
 
 configure_google_drive() {
     configure_file "Google Drive" "googleDrive" "credentials.json"
     write_to_env_file "HANDLER" "googleDrive"
-    docker_image="roxcustody/google_drive"
+    docker_image="roxcustody/google_drive_mpc"
 }
 
 # Function to display storage options and get user choice
@@ -345,14 +345,13 @@ clear_env_file
 display_options "$1"
 
 
-# Function to find an available port
+# Function to find an available port, optionally excluding a port
 find_available_port() {
     local exclude_port=$1
     for port in {3000..65535}; do
         if [ -n "$exclude_port" ] && [ "$port" -eq "$exclude_port" ]; then
             continue
         fi
-
         if ! nc -z localhost $port; then
             echo $port
             return 0
@@ -379,7 +378,7 @@ while true; do
     validate_domain_or_ip "$user_domain" && break
 done
 
-read -p "Enter your RoxCustody's subdomain (your_subdomain.roxcustody.com): " corporate_subdomain
+read -p "Enter your RoxCustody's subdomain (your_subdomain.roxcustody.io): " corporate_subdomain
 read -p "Enter your self custody manager (SCM) key: " api_key
 
 # Write essential environment variables to .env
@@ -387,14 +386,14 @@ write_to_env_file "API_KEY" "$api_key"
 write_to_env_file "DOMAIN" "$user_domain"
 write_to_env_file "SECURE_STORE_SECRET" "$(openssl rand -base64 32)"
 
-# Automatically select an available port
+# Automatically select available ports for HTTP and gRPC
 HTTP_PORT=$(find_available_port)
 GRPC_PORT=$(find_available_port $HTTP_PORT)
 
-write_to_env_file "HTTP_PORT" $HTTP_PORT
-write_to_env_file "GRPC_PORT" $GRPC_PORT
+write_to_env_file "HTTP_PORT" "3000"
+write_to_env_file "GRPC_PORT" "50051"
 write_to_env_file "HOST" "$user_domain"
-write_to_env_file "CUSTODY_URL" "https://${corporate_subdomain}.api.roxcustody.com/api"
+write_to_env_file "CUSTODY_URL" "https://${corporate_subdomain}.api-custody.roxcustody.io/api"
 
 
 # Add randomization using a random string or timestamp
@@ -416,10 +415,10 @@ prepare_docker_image() {
     temp_container_id=$(docker create "$base_image")
 
     # Copy .env and credentials file into the temporary container
-    docker cp "$env_file" "$temp_container_id:/app/.env"
+    docker cp "$env_file" "$temp_container_id:/usr/src/app/.env"
 
     if [ -n "$credentials_file" ]; then
-        docker cp "$credentials_file" "$temp_container_id:/app/$credentials_file"
+        docker cp "$credentials_file" "$temp_container_id:/usr/src/app/$credentials_file"
     fi
 
     # Commit the container to a new image with the copied files
@@ -438,8 +437,8 @@ prepare_docker_image "$docker_image" "$file_to_mount"
 
 # Run the Docker container from the newly created image with the custom name
 echo "Running the application on $user_domain (HTTP: $HTTP_PORT, gRPC: $GRPC_PORT) with container name: $container_name..."
-docker run -d -p $HTTP_PORT:$HTTP_PORT -p $GRPC_PORT:$GRPC_PORT --name "$container_name" --restart always --memory="4g" "$image_name"
-echo "Container is running on port $HTTP_PORT with the necessary files copied inside."
+docker run -d -p $HTTP_PORT:3000 -p $GRPC_PORT:50051 --name "$container_name" --restart always --memory="4g" "$image_name"
+echo "Container is running on HTTP port $HTTP_PORT and gRPC port $GRPC_PORT with the necessary files copied inside."
 
 # Print instructions to manage the container
 echo -e "\n--- Docker Container Management Instructions ---"
